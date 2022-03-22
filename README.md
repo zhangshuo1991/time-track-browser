@@ -1,4 +1,4 @@
-# time-track
+# time-track-browser
 
 ## Project setup
 ```

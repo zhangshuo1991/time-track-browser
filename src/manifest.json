@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "__MSG_extName__",
-  "homepage_url": "http://localhost:8080/",
+  "homepage_url": "https://wuliaodaobao.top/",
   "description": "An application that records how much time you spend each day visiting various websites",
   "default_locale": "en",
   "permissions": [

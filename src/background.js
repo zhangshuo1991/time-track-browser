@@ -4,10 +4,10 @@ db.transaction(function (tx) {
   tx.executeSql('CREATE TABLE IF NOT EXISTS WEB_LOGS_' + storageToday() + ' (id unique, website,faviconUrl,wasteTime,previousTime)')
 })
 
-browser.runtime.onMessage.addListener(function (request, sender, sendResponse) {
-  // console.log('Hello from the background')
-
-})
+// browser.runtime.onMessage.addListener(function (request, sender, sendResponse) {
+//   // console.log('Hello from the background')
+//
+// })
 
 chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
   // console.log('Hello from the background')

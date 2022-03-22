@@ -43,18 +43,19 @@ export default {
     const _this = this
     _this.tableData = []
     chrome.storage.local.get('dataAll', function (data) {
-      _this.defaultText = data.dataAll
-      data.dataAll.forEach(thisItem => {
-        if (thisItem.website && thisItem.website !== 'undefined') {
-          _this.tableData.push(
-            {
-              website: thisItem.website,
-              faviconUrl: thisItem.faviconUrl,
-              duration: _this.convertTime(thisItem.wasteTime)
-            }
-          )
-        }
-      })
+      if (data.dataAll && data.dataAll.length > 0) {
+        data.dataAll.forEach(thisItem => {
+          if (thisItem.website && thisItem.website !== 'undefined') {
+            _this.tableData.push(
+              {
+                website: thisItem.website,
+                faviconUrl: thisItem.faviconUrl,
+                duration: _this.convertTime(thisItem.wasteTime)
+              }
+            )
+          }
+        })
+      }
     })
   },
   created () {

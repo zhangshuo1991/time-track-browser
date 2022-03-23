@@ -35,7 +35,6 @@ export default {
     return {
       checkRadio: 'text',
       tableData: [],
-      defaultText: '',
       faviconUrls: []
     }
   },
@@ -45,15 +44,13 @@ export default {
     chrome.storage.local.get('dataAll', function (data) {
       if (data.dataAll && data.dataAll.length > 0) {
         data.dataAll.forEach(thisItem => {
-          if (thisItem.website && thisItem.website !== 'undefined') {
-            _this.tableData.push(
-              {
-                website: thisItem.website,
-                faviconUrl: thisItem.faviconUrl,
-                duration: _this.convertTime(thisItem.wasteTime)
-              }
-            )
-          }
+          _this.tableData.push(
+            {
+              website: thisItem.website,
+              faviconUrl: thisItem.faviconUrl,
+              duration: _this.convertTime(thisItem.wasteTime)
+            }
+          )
         })
       }
     })
@@ -65,6 +62,25 @@ export default {
 
   },
   methods: {
+    refreshData () {
+      const _this = this
+      _this.tableData = []
+      chrome.storage.local.get('dataAll', function (data) {
+        if (data.dataAll && data.dataAll.length > 0) {
+          data.dataAll.forEach(thisItem => {
+            if (thisItem.website && thisItem.website !== 'undefined') {
+              _this.tableData.push(
+                {
+                  website: thisItem.website,
+                  faviconUrl: thisItem.faviconUrl,
+                  duration: _this.convertTime(thisItem.wasteTime)
+                }
+              )
+            }
+          })
+        }
+      })
+    },
     storageToday () {
       const date = new Date()
       const timeKey = date.getFullYear() + '' + (date.getMonth() + 1) + '' + date.getDate()

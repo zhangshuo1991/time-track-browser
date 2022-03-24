@@ -10,7 +10,7 @@
         align="center"
       >
         <template slot-scope="scope">
-          <img v-show="scope.row.faviconUrl && scope.row.faviconUrl !== 'undefined'" :src="scope.row.faviconUrl" style="width:25px;height:25px;">
+<!--          <img v-show="scope.row.faviconUrl && scope.row.faviconUrl !== 'undefined'" :src="scope.row.faviconUrl" style="width:25px;height:25px;">-->
           <div style="height:25px;line-height:25px">
             <span>{{scope.row.website}}</span>
           </div>

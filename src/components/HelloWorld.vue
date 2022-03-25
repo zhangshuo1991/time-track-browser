@@ -10,7 +10,9 @@
         align="center"
       >
         <template slot-scope="scope">
-<!--          <img v-show="scope.row.faviconUrl && scope.row.faviconUrl !== 'undefined'" :src="scope.row.faviconUrl" style="width:25px;height:25px;">-->
+          <img v-if="scope.row.website === 'www.youtube.com' " src="../assets/youtube.png" style="width:25px;height:25px;">
+          <img v-else-if="scope.row.website === 'www.google.com' " src="../assets/google.png" style="width:25px;height:25px;">
+          <img v-else-if="scope.row.faviconUrl && scope.row.faviconUrl !== 'undefined'" :src="scope.row.faviconUrl" style="width:25px;height:25px;">
           <div style="height:25px;line-height:25px">
             <span>{{scope.row.website}}</span>
           </div>
@@ -46,6 +48,7 @@ export default {
         data.dataAll.forEach(thisItem => {
           _this.tableData.push(
             {
+              id: thisItem.id,
               website: thisItem.website,
               faviconUrl: thisItem.faviconUrl,
               duration: _this.convertTime(thisItem.wasteTime)
@@ -62,25 +65,40 @@ export default {
 
   },
   methods: {
-    refreshData () {
-      const _this = this
-      _this.tableData = []
-      chrome.storage.local.get('dataAll', function (data) {
-        if (data.dataAll && data.dataAll.length > 0) {
-          data.dataAll.forEach(thisItem => {
-            if (thisItem.website && thisItem.website !== 'undefined') {
-              _this.tableData.push(
-                {
-                  website: thisItem.website,
-                  faviconUrl: thisItem.faviconUrl,
-                  duration: _this.convertTime(thisItem.wasteTime)
-                }
-              )
-            }
-          })
+    loadImage (url, altUrl) {
+      let timer
+      function clearTimer () {
+        if (timer) {
+          clearTimeout(timer)
+          timer = null
         }
-      })
+      }
+
+      function handleFail () {
+        // kill previous error handlers
+        this.onload = this.onabort = this.onerror = function () {}
+        // stop existing timer
+        clearTimer()
+        // switch to alternate url
+        if (this.src === url) {
+          this.src = altUrl
+        }
+      }
+
+      var img = new Image()
+      img.onerror = img.onabort = handleFail
+      img.onload = function () {
+        clearTimer()
+      }
+      img.src = url
+      timer = setTimeout((function (theImg) {
+        return function () {
+          handleFail.call(theImg)
+        }
+      }(img)), 1000)
+      return (img)
     },
+
     storageToday () {
       const date = new Date()
       const timeKey = date.getFullYear() + '' + (date.getMonth() + 1) + '' + date.getDate()
@@ -116,4 +134,10 @@ export default {
 p {
   font-size: 20px;
 }
+/deep/ .demo-image__lazy .el-image {
+  display: block;
+  min-height: 200px;
+  margin-bottom: 10px;
+}
+
 </style>

@@ -29,6 +29,9 @@ setInterval(function () {
       const tempArray = []
       for (let i = 0; i < resultRow.length; i++) {
         const resultOne = resultRow[i]
+        if (resultOne.website === 'undefined' || resultOne.website === 'newtab' || resultOne.website === 'extensions') {
+          continue
+        }
         tempArray.push(resultOne)
       }
       chrome.storage.local.set({ dataAll: tempArray })
@@ -61,6 +64,9 @@ function clearAllInterval () {
 function storage (tabInfo) {
   clearAllInterval()
   const tempUrl = tabInfo.url.split('/')[2]
+  if (tempUrl === 'undefined' || tempUrl === 'newtab' || tempUrl === 'extensions' || tempUrl === 'downloads') {
+    return
+  }
   const id = window.btoa(tempUrl)
   const internalId = setInterval(function () {
     db.transaction(function (tx) {
@@ -77,7 +83,7 @@ function storage (tabInfo) {
       })
     })
   }, 1000)
-  console.log('push internalId:', internalId, tempUrl)
+  console.log('push internalId:', internalId, tempUrl, JSON.stringify(tabInfo))
   internalIdArrays.push(internalId)
 }
 

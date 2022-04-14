@@ -1,5 +1,5 @@
 {
-  "name": "time-track",
+  "name": "Time-Track",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -10,12 +10,15 @@
   "dependencies": {
     "axios": "^0.20.0",
     "core-js": "^3.6.5",
+    "dayjs": "^1.11.0",
     "echarts": "^4.5.0",
     "element-ui": "^2.15.6",
     "vue": "^2.6.11",
     "vue-echarts": "^4.0.4",
     "vue-router": "^3.2.0",
-    "vuex": "^3.4.0"
+    "vuex": "^3.4.0",
+    "swiper": "^5.4.5",
+    "vue-awesome-swiper": "^4.1.1"
   },
   "devDependencies": {
     "@vue/cli-plugin-babel": "~4.4.6",

@@ -5,12 +5,14 @@
         <swiper-slide v-for="item in days_links" :key="item" style="width:25px;height:25px;text-align:center">
           <el-link :underline="false" style="font-size:20px">{{item}}</el-link>
         </swiper-slide>
-        <div class="swiper-button-prev" slot="button-prev" @click="preClick"></div>
-        <div class="swiper-button-next" slot="button-next"></div>
+        <div class="swiper-button-prev" slot="button-prev" @click="prevClick"></div>
+        <div class="swiper-button-next" slot="button-next" @click="nextClick"></div>
       </swiper>
     </div>
     <el-table
-     style="width: 100%"
+      v-loading="tableLoading"
+     style="width: 100%;margin-top: 15px"
+      height="500"
      :data="tableData.slice((currentPage-1)*10,currentPage*10)"
     >
       <el-table-column
@@ -22,6 +24,7 @@
         <el-table-column
           prop="website"
           align="center"
+          width="150"
         >
         </el-table-column>
         <el-table-column
@@ -45,12 +48,37 @@
       >
       </el-table-column>
       <el-table-column
-        label="Operation"
+        label="Limit Time"
         align="center"
       >
-        <template slot-scope="scope">
-          <el-link type="primary" @click="setLimitTime(scope.row)">Limit Time</el-link>
-        </template>
+        <el-table-column
+          label="Time Limits"
+          align="center"
+        >
+          <template slot-scope="scope">
+            <el-link type="primary" v-if="scope.row.limitTime && scope.row.limitType === 1" @click="setLimitTime(scope.row)">{{scope.row.limitTime}}</el-link>
+            <el-link type="info" v-else-if="scope.row.limitTime && scope.row.limitType !== 1 && scope.row.limitTime !== 'undefined'" @click="setLimitTime(scope.row)">{{scope.row.limitTime}}</el-link>
+            <el-link type="primary" v-else @click="setLimitTime(scope.row)">Settings</el-link>
+          </template>
+        </el-table-column>
+        <el-table-column
+          label="Time Period Limit"
+          align="center"
+        >
+          <template slot-scope="scope">
+            <el-link type="primary" v-if="scope.row.startLimitTime && scope.row.limitType === 2" @click="setLimitPeriod(scope.row)">{{scope.row.startLimitTime}} ~ {{scope.row.endLimitTime}}</el-link>
+            <el-link type="info" v-else-if="scope.row.startLimitTime && scope.row.limitType !== 2 && scope.row.startLimitTime !== 'undefined'" @click="setLimitPeriod(scope.row)">{{scope.row.startLimitTime}} ~ {{scope.row.endLimitTime}}</el-link>
+            <el-link type="primary" v-else @click="setLimitPeriod(scope.row)">Settings</el-link>
+          </template>
+        </el-table-column>
+        <el-table-column
+          label="Cancel Limit"
+          align="center"
+        >
+          <template slot-scope="scope">
+            <el-link type="warning" @click="cancelLimit(scope.row)">Cancel Limit</el-link>
+          </template>
+        </el-table-column>
       </el-table-column>
     </el-table>
     <div class="block" style="text-align: right;">
@@ -62,20 +90,20 @@
       </el-pagination>
     </div>
 
-    <el-dialog title="Time Settings" width="60%" :visible.sync="dialogVisible">
-      <div>
-        <el-radio-group v-model="time_radio">
-          <el-radio :label="1">Time limits</el-radio>
-          <el-radio :label="2">Time Period Limit</el-radio>
-        </el-radio-group>
+    <el-dialog title="Time Limit Settings" width="60%" :visible.sync="dialogVisible">
+      <div style="text-align:left;padding: 10px;float:left">
+        &nbsp;<span>hours:&nbsp;&nbsp;</span><el-input-number size="mini" v-model="hour_num"></el-input-number>
       </div>
-      <div v-show="time_radio === 1" style="text-align:left;padding: 10px">
-        &nbsp;&nbsp;&nbsp;<span>hours:&nbsp;&nbsp;</span><el-input-number size="mini" v-model="hour_num"></el-input-number>
-      </div>
-      <div v-show="time_radio === 1" style="text-align:left;padding: 10px">
+      <div style="text-align:left;padding: 10px;float:left">
         <span>minutes:&nbsp;&nbsp;</span><el-input-number size="mini" v-model="minutes_num"></el-input-number>
       </div>
-      <div v-show="time_radio === 2" style="text-align:center;padding: 25px">
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="dialogVisible = false">Cancel</el-button>
+        <el-button type="primary" @click="saveLimit">Submit</el-button>
+      </span>
+    </el-dialog>
+    <el-dialog title="Time Period Settings" width="60%" :visible.sync="dialogVisiblePeriod">
+      <div style="text-align:center;padding: 25px">
         <el-time-picker
           style="width: 240px;"
           is-range
@@ -89,8 +117,8 @@
         </el-time-picker>
       </div>
       <span slot="footer" class="dialog-footer">
-        <el-button @click="dialogVisible = false">Cancel</el-button>
-        <el-button type="primary" @click="saveLimit">Submit</el-button>
+        <el-button @click="dialogVisiblePeriod = false">Cancel</el-button>
+        <el-button type="primary" @click="saveLimitPeriod">Submit</el-button>
       </span>
     </el-dialog>
   </div>
@@ -115,20 +143,25 @@ export default {
       },
       checkRadio: 'text',
       tableData: [],
+      tableLoading: false,
       currentPage: 1,
       time_radio: 1,
       faviconUrls: [],
       hour_num: 0,
       minutes_num: 0,
+      activeIndex: 10,
       dialogVisible: false,
+      dialogVisiblePeriod: false,
       limit_time_range: '',
       urlid: '',
-      days_links: []
+      days_links: [],
+      days_links_value: []
     }
   },
   mounted () {
     const _this = this
     _this.tableData = []
+    _this.tableLoading = true
     chrome.storage.local.get('dataAll', function (data) {
       if (data.dataAll && data.dataAll.length > 0) {
         data.dataAll.forEach(thisItem => {
@@ -137,16 +170,24 @@ export default {
               id: thisItem.id,
               website: thisItem.website,
               faviconUrl: thisItem.faviconUrl,
-              duration: _this.convertTime(thisItem.wasteTime)
+              duration: _this.convertTime(thisItem.wasteTime),
+              startLimitTime: thisItem.startLimitTime,
+              endLimitTime: thisItem.endLimitTime,
+              limitType: thisItem.limitType,
+              limitTime: _this.convertTime(thisItem.limitTime * 1000)
             }
           )
         })
       }
+      _this.tableLoading = false
     })
 
     for (let i = 10; i >= 0; i--) {
       this.days_links.push(
         dayjs().add(-i, 'day').format('YYYY-MM-DD')
+      )
+      this.days_links_value.push(
+        dayjs().add(-i, 'day').format('YYYYMMDD')
       )
     }
   },
@@ -157,32 +198,93 @@ export default {
 
   },
   methods: {
+    prevClick () {
+      if (this.activeIndex <= 0) {
+        return
+      }
+      this.activeIndex = this.activeIndex - 1
+
+      const _this = this
+      chrome.runtime.sendMessage({ buttonType: 'date', searchDate: this.days_links_value[this.activeIndex] }, function (response) {
+        _this.loadTableData()
+      })
+    },
+    nextClick () {
+      if (this.activeIndex >= 10) {
+        return
+      }
+      this.activeIndex = this.activeIndex + 1
+      const _this = this
+      chrome.runtime.sendMessage({ buttonType: 'date', searchDate: this.days_links_value[this.activeIndex] }, function (response) {
+        _this.loadTableData()
+      })
+    },
+    loadTableData () {
+      const _this = this
+      _this.tableData = []
+      _this.tableLoading = true
+      setTimeout(function () {
+        chrome.storage.local.get('dataAll', function (data) {
+          if (data.dataAll) {
+            data.dataAll.forEach(thisItem => {
+              _this.tableData.push(
+                {
+                  id: thisItem.id,
+                  website: thisItem.website,
+                  faviconUrl: thisItem.faviconUrl,
+                  duration: _this.convertTime(thisItem.wasteTime)
+                }
+              )
+            })
+          }
+          _this.tableLoading = false
+        })
+      }, 2000)
+    },
     handleCurrentChange (val) {
       this.currentPage = val
     },
     saveLimit () {
       const _this = this
-      if (this.time_radio === 1) {
-        if (!this.hour_num && !this.minutes_num) {
-          this.$message({
-            message: 'please enter hours and minutes',
-            type: 'warning'
-          })
-          return
-        }
-      }
-      if (this.time_radio === 2) {
-        if (!this.limit_time_range) {
-          this.$message({
-            message: 'please enter time range',
-            type: 'warning'
-          })
-          return
-        }
+      if (!this.hour_num && !this.minutes_num) {
+        this.$message({
+          message: 'please enter hours and minutes',
+          type: 'warning'
+        })
+        return
       }
       const params = {
-        limitType: this.time_radio,
+        limitType: 1,
         limitTime: (this.hour_num * 60 * 60) + (this.minutes_num * 60),
+        id: this.urlid
+      }
+      const loading = this.$loading({
+        lock: true,
+        text: 'Loading',
+        spinner: 'el-icon-loading',
+        background: 'rgba(0, 0, 0, 0.7)'
+      })
+      setTimeout(() => {
+        loading.close()
+      }, 1000)
+      chrome.runtime.sendMessage(params, function (response) {
+        _this.dialogVisible = false
+        _this.hour_num = 0
+        _this.minutes_num = 0
+        _this.urlid = ''
+      })
+    },
+    saveLimitPeriod () {
+      if (!this.limit_time_range) {
+        this.$message({
+          message: 'please enter time range',
+          type: 'warning'
+        })
+        return
+      }
+
+      const params = {
+        limitType: 2,
         startLimitTime: this.limit_time_range[0],
         endLimitTime: this.limit_time_range[1],
         id: this.urlid
@@ -196,21 +298,37 @@ export default {
       setTimeout(() => {
         loading.close()
       }, 3000)
+      const _this = this
       chrome.runtime.sendMessage(params, function (response) {
-        _this.dialogVisible = false
-        _this.time_radio = 1
-        _this.hour_num = 0
-        _this.minutes_num = 0
+        _this.dialogVisiblePeriod = false
         _this.urlid = ''
+        _this.limit_time_range = ''
       })
     },
-    preClick (event) {
-      console.log(event)
+    cancelLimit (row) {
+      const params = {
+        limitType: 0,
+        id: row.id
+      }
+      const _this = this
+      chrome.runtime.sendMessage(params, function (response) {
+        _this.$message({
+          message: 'Cancel Limit Success!!!!',
+          type: 'success'
+        })
+      })
     },
     setLimitTime (row) {
-      console.log(row)
       this.dialogVisible = true
       this.urlid = row.id
+    },
+    setLimitPeriod (row) {
+      console.log(row)
+      this.dialogVisiblePeriod = true
+      this.urlid = row.id
+    },
+    viewDetailTime (row) {
+      this.$emit('switchTab', 'detail')
     },
     storageToday () {
       const date = new Date()

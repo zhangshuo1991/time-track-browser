@@ -1,14 +1,17 @@
 var db = openDatabase('mydb', '1.0', 'Test DB', 2 * 1024 * 1024)
 db.transaction(function (tx) {
-  tx.executeSql('Drop TABLE  WEB_LOGS_' + storageToday())
   tx.executeSql('CREATE TABLE IF NOT EXISTS WEB_LIMIT_LOG  (id unique,limitTime,limitType,startLimitTime,endLimitTime )')
   tx.executeSql('CREATE TABLE IF NOT EXISTS WEB_LOGS_' + storageToday() + ' (id unique, website,faviconUrl,wasteTime,previousTime)')
 })
 
 browser.runtime.onMessage.addListener(function (request, sender, sendResponse) {
   console.log('Hello from the background', JSON.stringify(request))
-  setLimitTime(request.id, request.limitTime, request.limitType, request.startLimitTime, request.endLimitTime)
   sendResponse({ farewell: '再见' })
+  if (request.buttonType === 'date') {
+    searchDataByDate(request.searchDate)
+  } else {
+    setLimitTime(request.id, request.limitTime, request.limitType, request.startLimitTime, request.endLimitTime)
+  }
 })
 var internalIdArrays = []
 chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
@@ -36,7 +39,7 @@ function setLimitTime (id, limitTime, limitType, startLimitTime, endLimitTime) {
         console.log(results)
       })
     })
-  } else {
+  } else if (limitType === 2) {
     db.transaction(function (tx) {
       tx.executeSql('SELECT * FROM WEB_LIMIT_LOG where id = ?', [id], function (tx, results) {
         if (results.rows.length <= 0) {
@@ -48,7 +51,38 @@ function setLimitTime (id, limitTime, limitType, startLimitTime, endLimitTime) {
         console.log(results)
       })
     })
+  } else {
+    db.transaction(function (tx) {
+      tx.executeSql('SELECT * FROM WEB_LIMIT_LOG where id = ?', [id], function (tx, results) {
+        if (results.rows.length <= 0) {
+          tx.executeSql('INSERT INTO WEB_LIMIT_LOG (id,limitType) VALUES (?, ?)', [id, limitType])
+        } else {
+          tx.executeSql('update WEB_LIMIT_LOG set limitType=? where id = ? ', [limitType, id])
+        }
+      }, function (tx, results) {
+        console.log(results)
+      })
+    })
   }
+}
+
+function searchDataByDate (searchDate) {
+  db.transaction(function (tx) {
+    tx.executeSql('SELECT * FROM WEB_LOGS_' + searchDate + ' order by wasteTime desc ', [], function (tx, results) {
+      const resultRow = results.rows
+      const tempArray = []
+      for (let i = 0; i < resultRow.length; i++) {
+        const resultOne = resultRow[i]
+        if (resultOne.website === 'undefined' || resultOne.website === 'newtab' || resultOne.website === 'extensions') {
+          continue
+        }
+        tempArray.push(resultOne)
+      }
+      chrome.storage.local.set({ dataAll: tempArray })
+    }, function (tx, results) {
+      console.log(results)
+    })
+  })
 }
 
 /**
@@ -56,8 +90,9 @@ function setLimitTime (id, limitTime, limitType, startLimitTime, endLimitTime) {
  */
 setInterval(function () {
   db.transaction(function (tx) {
-    tx.executeSql('SELECT * FROM WEB_LOGS_' + storageToday() + ' order by wasteTime desc ', [], function (tx, results) {
+    tx.executeSql('SELECT s.id,s.website,s.faviconUrl,s.wasteTime,w.limitTime,w.startLimitTime,w.endLimitTime,w.limitType FROM WEB_LOGS_' + storageToday() + ' s left join WEB_LIMIT_LOG w on s.id = w.id order by wasteTime desc ', [], function (tx, results) {
       const resultRow = results.rows
+      console.log(resultRow)
       const tempArray = []
       for (let i = 0; i < resultRow.length; i++) {
         const resultOne = resultRow[i]
@@ -142,6 +177,7 @@ function storage (tabInfo) {
               }
             } else if (limitObj.limitType === 2) {
               const checkAudit = checkAuditTime(limitObj.startLimitTime, limitObj.endLimitTime)
+              console.log(checkAudit)
               if (checkAudit) {
                 const message = 'Currently not in the time frame you have set for viewing, please cherish the time'
                 const jsCode = ' var node=document.getElementById("zhangshuo");if(node){document.body.removeChild(node)}' +

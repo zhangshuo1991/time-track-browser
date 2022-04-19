@@ -92,7 +92,6 @@ setInterval(function () {
   db.transaction(function (tx) {
     tx.executeSql('SELECT s.id,s.website,s.faviconUrl,s.wasteTime,w.limitTime,w.startLimitTime,w.endLimitTime,w.limitType FROM WEB_LOGS_' + storageToday() + ' s left join WEB_LIMIT_LOG w on s.id = w.id order by wasteTime desc ', [], function (tx, results) {
       const resultRow = results.rows
-      console.log(resultRow)
       const tempArray = []
       for (let i = 0; i < resultRow.length; i++) {
         const resultOne = resultRow[i]

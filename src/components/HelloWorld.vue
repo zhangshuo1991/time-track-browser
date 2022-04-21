@@ -20,7 +20,6 @@
         label="WEBSITE"
         align="center"
       >
-
         <el-table-column
           prop="website"
           align="center"
@@ -36,6 +35,7 @@
             <img v-else-if="scope.row.website === 'www.google.com' " src="../assets/google.png" style="width:25px;height:25px;" alt="">
             <img v-else-if="scope.row.website === 'twitter.com' " src="../assets/Twitter.png" style="width:25px;height:25px;" alt="">
             <img v-else-if="scope.row.website.indexOf('ycombinator.com')>=0 " src="../assets/ycombinator.png" style="width:25px;height:25px;" alt="">
+            <img v-else-if="scope.row.website.indexOf('wikipedia.org')>=0 " src="../assets/wikipedia-w.png" style="width:25px;height:25px;" alt="">
             <img v-else-if="scope.row.faviconUrl && scope.row.faviconUrl !== 'undefined'" :src="scope.row.faviconUrl" style="width:25px;height:25px;" alt="">
             <img v-else src="../assets/emoji.png" style="width:25px;height:25px;" alt="">
           </template>
@@ -306,17 +306,18 @@ export default {
       })
     },
     cancelLimit (row) {
-      const params = {
-        limitType: 0,
-        id: row.id
-      }
-      const _this = this
-      chrome.runtime.sendMessage(params, function (response) {
-        _this.$message({
-          message: 'Cancel Limit Success!!!!',
-          type: 'success'
-        })
-      })
+      // const params = {
+      //   limitType: 0,
+      //   id: row.id
+      // }
+      // const _this = this
+      // chrome.runtime.sendMessage(params, function (response) {
+      //   _this.$message({
+      //     message: 'Cancel Limit Success!!!!',
+      //     type: 'success'
+      //   })
+      // })
+      window.open('detail.html')
     },
     setLimitTime (row) {
       this.dialogVisible = true

@@ -4,6 +4,11 @@ module.exports = {
       template: 'public/browser-extension.html',
       entry: './src/popup/main.js',
       title: 'Popup'
+    },
+    detail: {
+      template: 'public/browser-extension.html',
+      entry: './src/detail/main.js',
+      title: 'Detail'
     }
   },
   pluginOptions: {

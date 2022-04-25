@@ -1,12 +1,14 @@
 <template>
   <div id="app">
-    这是一个detail的页面
+    <detail-time></detail-time>
   </div>
 </template>
 
 <script>
+import DetailTime from '@/components/DetailTime.vue'
 export default {
-  name: 'App'
+  name: 'App',
+  components: { DetailTime }
 }
 </script>
 

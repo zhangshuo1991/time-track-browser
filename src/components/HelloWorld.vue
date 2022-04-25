@@ -1,16 +1,6 @@
 <template>
   <div id="app">
-    <div>
-      <swiper class="swiper" :options="swiperOption" style="height:30px;line-height: 30px">
-        <swiper-slide v-for="item in days_links" :key="item" style="width:25px;height:25px;text-align:center">
-          <el-link :underline="false" style="font-size:20px">{{item}}</el-link>
-        </swiper-slide>
-        <div class="swiper-button-prev" slot="button-prev" @click="prevClick"></div>
-        <div class="swiper-button-next" slot="button-next" @click="nextClick"></div>
-      </swiper>
-    </div>
     <el-table
-      v-loading="tableLoading"
      style="width: 100%;margin-top: 15px"
       height="500"
      :data="tableData.slice((currentPage-1)*10,currentPage*10)"
@@ -58,7 +48,7 @@
           <template slot-scope="scope">
             <el-link type="primary" v-if="scope.row.limitTime && scope.row.limitType === 1" @click="setLimitTime(scope.row)">{{scope.row.limitTime}}</el-link>
             <el-link type="info" v-else-if="scope.row.limitTime && scope.row.limitType !== 1 && scope.row.limitTime !== 'undefined'" @click="setLimitTime(scope.row)">{{scope.row.limitTime}}</el-link>
-            <el-link type="primary" v-else @click="setLimitTime(scope.row)">Settings</el-link>
+            <el-link type="info" v-else @click="setLimitTime(scope.row)">Settings</el-link>
           </template>
         </el-table-column>
         <el-table-column
@@ -68,7 +58,7 @@
           <template slot-scope="scope">
             <el-link type="primary" v-if="scope.row.startLimitTime && scope.row.limitType === 2" @click="setLimitPeriod(scope.row)">{{scope.row.startLimitTime}} ~ {{scope.row.endLimitTime}}</el-link>
             <el-link type="info" v-else-if="scope.row.startLimitTime && scope.row.limitType !== 2 && scope.row.startLimitTime !== 'undefined'" @click="setLimitPeriod(scope.row)">{{scope.row.startLimitTime}} ~ {{scope.row.endLimitTime}}</el-link>
-            <el-link type="primary" v-else @click="setLimitPeriod(scope.row)">Settings</el-link>
+            <el-link type="info"  v-else @click="setLimitPeriod(scope.row)">Settings</el-link>
           </template>
         </el-table-column>
         <el-table-column
@@ -79,6 +69,14 @@
             <el-link type="warning" @click="cancelLimit(scope.row)">Cancel Limit</el-link>
           </template>
         </el-table-column>
+      </el-table-column>
+      <el-table-column
+        label="Detail Time"
+        align="center"
+      >
+        <template slot-scope="scope">
+          <el-link type="primary" @click="detailTime(scope.row)">Detail</el-link>
+        </template>
       </el-table-column>
     </el-table>
     <div class="block" style="text-align: right;">
@@ -91,16 +89,14 @@
     </div>
 
     <el-dialog title="Time Limit Settings" width="60%" :visible.sync="dialogVisible">
-      <div style="text-align:left;padding: 10px;float:left">
-        &nbsp;<span>hours:&nbsp;&nbsp;</span><el-input-number size="mini" v-model="hour_num"></el-input-number>
+      <div style="text-align:left;padding: 10px;">
+        &nbsp;<span>hours:</span><el-input-number size="mini" v-model="hour_num"></el-input-number>
+         <span>minutes:</span><el-input-number size="mini" v-model="minutes_num"></el-input-number>
       </div>
-      <div style="text-align:left;padding: 10px;float:left">
-        <span>minutes:&nbsp;&nbsp;</span><el-input-number size="mini" v-model="minutes_num"></el-input-number>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="dialogVisible = false" size="small">Cancel</el-button>
+        <el-button type="primary" @click="saveLimit" size="small">Submit</el-button>
       </div>
-      <span slot="footer" class="dialog-footer">
-        <el-button @click="dialogVisible = false">Cancel</el-button>
-        <el-button type="primary" @click="saveLimit">Submit</el-button>
-      </span>
     </el-dialog>
     <el-dialog title="Time Period Settings" width="60%" :visible.sync="dialogVisiblePeriod">
       <div style="text-align:center;padding: 25px">
@@ -116,22 +112,18 @@
           placeholder="select time range">
         </el-time-picker>
       </div>
-      <span slot="footer" class="dialog-footer">
-        <el-button @click="dialogVisiblePeriod = false">Cancel</el-button>
-        <el-button type="primary" @click="saveLimitPeriod">Submit</el-button>
-      </span>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="dialogVisiblePeriod = false" size="small">Cancel</el-button>
+        <el-button type="primary" @click="saveLimitPeriod" size="small">Submit</el-button>
+      </div>
     </el-dialog>
   </div>
 </template>
 
 <script>
-import { Swiper, SwiperSlide } from 'vue-awesome-swiper'
-import 'swiper/css/swiper.css'
 const dayjs = require('dayjs')
 export default {
   name: 'HelloWorld',
-  // eslint-disable-next-line vue/no-unused-components
-  components: { Swiper, SwiperSlide },
   data () {
     return {
       swiperOption: {
@@ -306,17 +298,21 @@ export default {
       })
     },
     cancelLimit (row) {
-      // const params = {
-      //   limitType: 0,
-      //   id: row.id
-      // }
-      // const _this = this
-      // chrome.runtime.sendMessage(params, function (response) {
-      //   _this.$message({
-      //     message: 'Cancel Limit Success!!!!',
-      //     type: 'success'
-      //   })
-      // })
+      const params = {
+        limitType: 0,
+        id: row.id
+      }
+      const _this = this
+      chrome.runtime.sendMessage(params, function (response) {
+        _this.$message({
+          message: 'Cancel Limit Success!!!!',
+          type: 'success',
+          duration: 2000
+        })
+      })
+    },
+    detailTime (row) {
+      window.localStorage.setItem('tableData', JSON.stringify(this.tableData))
       window.open('detail.html')
     },
     setLimitTime (row) {

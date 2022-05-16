@@ -3,7 +3,7 @@
     <el-table
      style="width: 100%;margin-top: 15px"
       height="500"
-     :data="tableData.slice((currentPage-1)*10,currentPage*10)"
+     :data="tableData"
     >
       <el-table-column
         prop="duration"
@@ -26,16 +26,20 @@
             <img v-else-if="scope.row.website === 'twitter.com' " src="../assets/Twitter.png" style="width:25px;height:25px;" alt="">
             <img v-else-if="scope.row.website.indexOf('ycombinator.com')>=0 " src="../assets/ycombinator.png" style="width:25px;height:25px;" alt="">
             <img v-else-if="scope.row.website.indexOf('wikipedia.org')>=0 " src="../assets/wikipedia-w.png" style="width:25px;height:25px;" alt="">
+            <img v-else-if="scope.row.website.indexOf('medium.com')>=0 " src="../assets/medium.png" style="width:25px;height:25px;" alt="">
             <img v-else-if="scope.row.faviconUrl && scope.row.faviconUrl !== 'undefined'" :src="scope.row.faviconUrl" style="width:25px;height:25px;" alt="">
             <img v-else src="../assets/emoji.png" style="width:25px;height:25px;" alt="">
           </template>
         </el-table-column>
       </el-table-column>
       <el-table-column
-        prop="duration"
+        prop="wasteTime"
         label="DURATION"
         align="center"
       >
+        <template slot-scope="scope">
+          <span>{{scope.row.duration}}</span>
+        </template>
       </el-table-column>
       <el-table-column
         label="Limit Time"
@@ -79,14 +83,6 @@
         </template>
       </el-table-column>
     </el-table>
-    <div class="block" style="text-align: right;">
-      <el-pagination
-        layout="pager"
-        @current-change="handleCurrentChange"
-        :current-page="currentPage"
-        :total="tableData.length">
-      </el-pagination>
-    </div>
 
     <el-dialog title="Time Limit Settings" width="60%" :visible.sync="dialogVisible">
       <div style="text-align:left;padding: 10px;">
@@ -121,6 +117,7 @@
 </template>
 
 <script>
+import dbDexie from '../utils/db_dexie'
 const dayjs = require('dayjs')
 export default {
   name: 'HelloWorld',
@@ -147,40 +144,25 @@ export default {
       limit_time_range: '',
       urlid: '',
       days_links: [],
-      days_links_value: []
+      days_links_value: [],
+      indexDB: null
     }
   },
   mounted () {
-    const _this = this
-    _this.tableData = []
-    _this.tableLoading = true
-    chrome.storage.local.get('dataAll', function (data) {
-      if (data.dataAll && data.dataAll.length > 0) {
-        data.dataAll.forEach(thisItem => {
-          _this.tableData.push(
-            {
-              id: thisItem.id,
-              website: thisItem.website,
-              faviconUrl: thisItem.faviconUrl,
-              duration: _this.convertTime(thisItem.wasteTime),
-              startLimitTime: thisItem.startLimitTime,
-              endLimitTime: thisItem.endLimitTime,
-              limitType: thisItem.limitType,
-              limitTime: _this.convertTime(thisItem.limitTime * 1000)
-            }
-          )
-        })
-      }
-      _this.tableLoading = false
-    })
+    this.getLimitRecordById()
 
-    for (let i = 10; i >= 0; i--) {
-      this.days_links.push(
-        dayjs().add(-i, 'day').format('YYYY-MM-DD')
-      )
-      this.days_links_value.push(
-        dayjs().add(-i, 'day').format('YYYYMMDD')
-      )
+    const request = window.indexedDB.open('MyTimeDB-Tracking')
+    request.onerror = function (event) {
+      console.log('Problem opening DB.', event)
+    }
+
+    const _this = this
+    request.onsuccess = function (event) {
+      _this.indexDB = event.target.result
+      console.log('DB OPENED.')
+      _this.indexDB.onerror = function (event) {
+        console.log('FAILED TO OPEN DB.')
+      }
     }
   },
   created () {
@@ -190,54 +172,41 @@ export default {
 
   },
   methods: {
-    prevClick () {
-      if (this.activeIndex <= 0) {
-        return
+    async getLimitRecordById () {
+      const tableName = 'WEB_LOGS_' + dayjs().format('YYYYMMDD')
+      const result = await dbDexie[tableName].reverse().sortBy('wasteTime')
+      this.tableData = []
+      for (const thisItem of result) {
+        const resultLimit = await dbDexie.WEB_LIMIT_LOG.where('id').equalsIgnoreCase(thisItem.id).first()
+        if (resultLimit) {
+          this.tableData.push(
+            {
+              id: thisItem.id,
+              website: thisItem.website,
+              faviconUrl: thisItem.faviconUrl,
+              duration: this.convertTime(thisItem.wasteTime),
+              startLimitTime: resultLimit.startLimitTime,
+              endLimitTime: resultLimit.endLimitTime,
+              limitType: resultLimit.limitType,
+              limitTime: this.convertTime(resultLimit.limitTime * 1000)
+            }
+          )
+        } else {
+          this.tableData.push(
+            {
+              id: thisItem.id,
+              website: thisItem.website,
+              faviconUrl: thisItem.faviconUrl,
+              duration: this.convertTime(thisItem.wasteTime)
+            }
+          )
+        }
       }
-      this.activeIndex = this.activeIndex - 1
-
-      const _this = this
-      chrome.runtime.sendMessage({ buttonType: 'date', searchDate: this.days_links_value[this.activeIndex] }, function (response) {
-        _this.loadTableData()
-      })
-    },
-    nextClick () {
-      if (this.activeIndex >= 10) {
-        return
-      }
-      this.activeIndex = this.activeIndex + 1
-      const _this = this
-      chrome.runtime.sendMessage({ buttonType: 'date', searchDate: this.days_links_value[this.activeIndex] }, function (response) {
-        _this.loadTableData()
-      })
-    },
-    loadTableData () {
-      const _this = this
-      _this.tableData = []
-      _this.tableLoading = true
-      setTimeout(function () {
-        chrome.storage.local.get('dataAll', function (data) {
-          if (data.dataAll) {
-            data.dataAll.forEach(thisItem => {
-              _this.tableData.push(
-                {
-                  id: thisItem.id,
-                  website: thisItem.website,
-                  faviconUrl: thisItem.faviconUrl,
-                  duration: _this.convertTime(thisItem.wasteTime)
-                }
-              )
-            })
-          }
-          _this.tableLoading = false
-        })
-      }, 2000)
     },
     handleCurrentChange (val) {
       this.currentPage = val
     },
     saveLimit () {
-      const _this = this
       if (!this.hour_num && !this.minutes_num) {
         this.$message({
           message: 'please enter hours and minutes',
@@ -258,13 +227,44 @@ export default {
       })
       setTimeout(() => {
         loading.close()
+        this.dialogVisible = false
       }, 1000)
-      chrome.runtime.sendMessage(params, function (response) {
-        _this.dialogVisible = false
-        _this.hour_num = 0
-        _this.minutes_num = 0
-        _this.urlid = ''
+
+      const _this = this
+      this.getLimitRecord(this.urlid).then(res => {
+        if (res) {
+          const putTransaction = this.indexDB.transaction('WEB_LIMIT_LOG', 'readwrite')
+          const objectStore = putTransaction.objectStore('WEB_LIMIT_LOG')
+          objectStore.put(params)
+        } else {
+          const insertTransaction = this.indexDB.transaction('WEB_LIMIT_LOG', 'readwrite')
+          const objectStore = insertTransaction.objectStore('WEB_LIMIT_LOG')
+          const request = objectStore.add(params)
+          request.onsuccess = function () {
+            console.log('Added: ', params)
+          }
+        }
+        _this.getLimitRecordById()
       })
+    },
+    getLimitRecord (id) {
+      if (this.indexDB) {
+        const tableName = 'WEB_LIMIT_LOG'
+        // eslint-disable-next-line camelcase
+        const get_transaction = this.indexDB.transaction(tableName, 'readonly')
+        const objectStore = get_transaction.objectStore(tableName)
+        return new Promise((resolve, reject) => {
+          get_transaction.oncomplete = function () {
+          }
+          get_transaction.onerror = function () {
+            console.log('PROBLEM GETTING RECORDS.')
+          }
+          const request = objectStore.get(id)
+          request.onsuccess = function (event) {
+            resolve(event.target.result)
+          }
+        })
+      }
     },
     saveLimitPeriod () {
       if (!this.limit_time_range) {
@@ -289,12 +289,25 @@ export default {
       })
       setTimeout(() => {
         loading.close()
-      }, 3000)
+        this.dialogVisiblePeriod = false
+      }, 2000)
+      // 存储限制时间
+
       const _this = this
-      chrome.runtime.sendMessage(params, function (response) {
-        _this.dialogVisiblePeriod = false
-        _this.urlid = ''
-        _this.limit_time_range = ''
+      this.getLimitRecord(this.urlid).then(res => {
+        if (res) {
+          const putTransaction = this.indexDB.transaction('WEB_LIMIT_LOG', 'readwrite')
+          const objectStore = putTransaction.objectStore('WEB_LIMIT_LOG')
+          objectStore.put(params)
+        } else {
+          const insertTransaction = this.indexDB.transaction('WEB_LIMIT_LOG', 'readwrite')
+          const objectStore = insertTransaction.objectStore('WEB_LIMIT_LOG')
+          const request = objectStore.add(params)
+          request.onsuccess = function () {
+            console.log('Added: ', params)
+          }
+        }
+        _this.getLimitRecordById()
       })
     },
     cancelLimit (row) {
@@ -302,14 +315,8 @@ export default {
         limitType: 0,
         id: row.id
       }
-      const _this = this
-      chrome.runtime.sendMessage(params, function (response) {
-        _this.$message({
-          message: 'Cancel Limit Success!!!!',
-          type: 'success',
-          duration: 2000
-        })
-      })
+      dbDexie.WEB_LIMIT_LOG.update(row.id, params)
+      this.getLimitRecordById()
     },
     detailTime (row) {
       window.localStorage.setItem('tableData', JSON.stringify(this.tableData))
@@ -320,7 +327,6 @@ export default {
       this.urlid = row.id
     },
     setLimitPeriod (row) {
-      console.log(row)
       this.dialogVisiblePeriod = true
       this.urlid = row.id
     },

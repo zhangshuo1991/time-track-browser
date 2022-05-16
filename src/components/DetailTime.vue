@@ -27,6 +27,7 @@
               <img v-else-if="scope.row.website === 'twitter.com' " src="../assets/Twitter.png" style="width:25px;height:25px;" alt="">
               <img v-else-if="scope.row.website.indexOf('ycombinator.com')>=0 " src="../assets/ycombinator.png" style="width:25px;height:25px;" alt="">
               <img v-else-if="scope.row.website.indexOf('wikipedia.org')>=0 " src="../assets/wikipedia-w.png" style="width:25px;height:25px;" alt="">
+              <img v-else-if="scope.row.website.indexOf('medium.com')>=0 " src="../assets/medium.png" style="width:25px;height:25px;" alt="">
               <img v-else-if="scope.row.faviconUrl && scope.row.faviconUrl !== 'undefined'" :src="scope.row.faviconUrl" style="width:25px;height:25px;" alt="">
               <img v-else src="../assets/emoji.png" style="width:25px;height:25px;" alt="">
             </template>

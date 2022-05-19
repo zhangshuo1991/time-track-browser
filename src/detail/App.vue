@@ -12,6 +12,8 @@ export default {
 }
 </script>
 
-<style scoped>
-
+<style>
+html{
+  height: 500px;
+}
 </style>

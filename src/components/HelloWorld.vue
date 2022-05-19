@@ -65,14 +65,6 @@
             <el-link type="info"  v-else @click="setLimitPeriod(scope.row)">Settings</el-link>
           </template>
         </el-table-column>
-        <el-table-column
-          label="Cancel Limit"
-          align="center"
-        >
-          <template slot-scope="scope">
-            <el-link type="warning" @click="cancelLimit(scope.row)">Cancel Limit</el-link>
-          </template>
-        </el-table-column>
       </el-table-column>
       <el-table-column
         label="Detail Time"
@@ -123,13 +115,6 @@ export default {
   name: 'HelloWorld',
   data () {
     return {
-      swiperOption: {
-        navigation: {
-          nextEl: '.swiper-button-next',
-          prevEl: '.swiper-button-prev'
-        },
-        initialSlide: 10
-      },
       checkRadio: 'text',
       tableData: [],
       tableLoading: false,
@@ -188,7 +173,7 @@ export default {
               startLimitTime: resultLimit.startLimitTime,
               endLimitTime: resultLimit.endLimitTime,
               limitType: resultLimit.limitType,
-              limitTime: this.convertTime(resultLimit.limitTime * 1000)
+              limitTime: resultLimit.limitTime ? this.convertTime(resultLimit.limitTime * 1000) : ''
             }
           )
         } else {
@@ -310,16 +295,7 @@ export default {
         _this.getLimitRecordById()
       })
     },
-    cancelLimit (row) {
-      const params = {
-        limitType: 0,
-        id: row.id
-      }
-      dbDexie.WEB_LIMIT_LOG.update(row.id, params)
-      this.getLimitRecordById()
-    },
     detailTime (row) {
-      window.localStorage.setItem('tableData', JSON.stringify(this.tableData))
       window.open('detail.html')
     },
     setLimitTime (row) {

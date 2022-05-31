@@ -13,12 +13,14 @@
         <el-table-column
           prop="website"
           align="center"
+          label="Name"
           width="150"
         >
         </el-table-column>
         <el-table-column
           prop="faviconUrl"
           align="center"
+          label="Icon"
         >
           <template slot-scope="scope">
             <img v-if="scope.row.website === 'www.youtube.com' " src="../assets/youtube.png" style="width:25px;height:25px;" alt="">
@@ -46,7 +48,7 @@
         align="center"
       >
         <el-table-column
-          label="Time Limits"
+          label="Duration"
           align="center"
         >
           <template slot-scope="scope">
@@ -56,13 +58,21 @@
           </template>
         </el-table-column>
         <el-table-column
-          label="Time Period Limit"
+          label="Period"
           align="center"
         >
           <template slot-scope="scope">
             <el-link type="primary" v-if="scope.row.startLimitTime && scope.row.limitType === 2" @click="setLimitPeriod(scope.row)">{{scope.row.startLimitTime}} ~ {{scope.row.endLimitTime}}</el-link>
             <el-link type="info" v-else-if="scope.row.startLimitTime && scope.row.limitType !== 2 && scope.row.startLimitTime !== 'undefined'" @click="setLimitPeriod(scope.row)">{{scope.row.startLimitTime}} ~ {{scope.row.endLimitTime}}</el-link>
             <el-link type="info"  v-else @click="setLimitPeriod(scope.row)">Settings</el-link>
+          </template>
+        </el-table-column>
+        <el-table-column
+          label="Cancel"
+          align="center"
+        >
+          <template slot-scope="scope">
+            <el-link type="info" @click="cancelLimit(scope.row)">Cancel</el-link>
           </template>
         </el-table-column>
       </el-table-column>
@@ -334,6 +344,13 @@ export default {
       }
       const time = seconds + 's '
       return time
+    },
+    cancelLimit (row) {
+      const params = {
+        limitType: 0,
+        id: row.id
+      }
+      dbDexie.WEB_LIMIT_LOG.update(row.id, params)
     }
   }
 

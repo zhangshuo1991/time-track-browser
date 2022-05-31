@@ -1,3 +1,4 @@
+
 browser.runtime.onMessage.addListener(function (request, sender, sendResponse) {
   sendResponse({ farewell: '再见' })
 })

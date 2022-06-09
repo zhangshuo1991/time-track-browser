@@ -70,6 +70,10 @@ export default {
             data: [],
             type: 'line',
             smooth: true,
+            label: {
+              show: true,
+              position: 'top'
+            },
             areaStyle: {}
           }
         ]

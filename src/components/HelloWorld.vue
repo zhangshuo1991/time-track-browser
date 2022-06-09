@@ -1,5 +1,15 @@
 <template>
   <div id="app">
+    <div class="block">
+      <el-date-picker
+        v-model="date_value"
+        type="date"
+        value-format="yyyy-MM-dd"
+        placeholder="select date"
+        @change="changeDate"
+      >
+      </el-date-picker>
+    </div>
     <el-table
      style="width: 100%;margin-top: 15px"
       height="500"
@@ -12,10 +22,13 @@
       >
         <el-table-column
           prop="website"
-          align="center"
           label="Name"
-          width="150"
+          width="200"
+          align="center"
         >
+          <template slot-scope="scope">
+            <el-link type="primary">{{scope.row.website}}</el-link>
+          </template>
         </el-table-column>
         <el-table-column
           prop="faviconUrl"
@@ -42,39 +55,6 @@
         <template slot-scope="scope">
           <span>{{scope.row.duration}}</span>
         </template>
-      </el-table-column>
-      <el-table-column
-        label="Limit Time"
-        align="center"
-      >
-        <el-table-column
-          label="Duration"
-          align="center"
-        >
-          <template slot-scope="scope">
-            <el-link type="primary" v-if="scope.row.limitTime && scope.row.limitType === 1" @click="setLimitTime(scope.row)">{{scope.row.limitTime}}</el-link>
-            <el-link type="info" v-else-if="scope.row.limitTime && scope.row.limitType !== 1 && scope.row.limitTime !== 'undefined'" @click="setLimitTime(scope.row)">{{scope.row.limitTime}}</el-link>
-            <el-link type="info" v-else @click="setLimitTime(scope.row)">Settings</el-link>
-          </template>
-        </el-table-column>
-        <el-table-column
-          label="Period"
-          align="center"
-        >
-          <template slot-scope="scope">
-            <el-link type="primary" v-if="scope.row.startLimitTime && scope.row.limitType === 2" @click="setLimitPeriod(scope.row)">{{scope.row.startLimitTime}} ~ {{scope.row.endLimitTime}}</el-link>
-            <el-link type="info" v-else-if="scope.row.startLimitTime && scope.row.limitType !== 2 && scope.row.startLimitTime !== 'undefined'" @click="setLimitPeriod(scope.row)">{{scope.row.startLimitTime}} ~ {{scope.row.endLimitTime}}</el-link>
-            <el-link type="info"  v-else @click="setLimitPeriod(scope.row)">Settings</el-link>
-          </template>
-        </el-table-column>
-        <el-table-column
-          label="Cancel"
-          align="center"
-        >
-          <template slot-scope="scope">
-            <el-link type="info" @click="cancelLimit(scope.row)">Cancel</el-link>
-          </template>
-        </el-table-column>
       </el-table-column>
       <el-table-column
         label="Detail Time"
@@ -120,6 +100,7 @@
 
 <script>
 import dbDexie from '../utils/db_dexie'
+import Dexie from 'dexie'
 const dayjs = require('dayjs')
 export default {
   name: 'HelloWorld',
@@ -139,6 +120,7 @@ export default {
       limit_time_range: '',
       urlid: '',
       days_links: [],
+      date_value: dayjs().format('YYYY-MM-DD'),
       days_links_value: [],
       indexDB: null
     }
@@ -172,30 +154,14 @@ export default {
       const result = await dbDexie[tableName].reverse().sortBy('wasteTime')
       this.tableData = []
       for (const thisItem of result) {
-        const resultLimit = await dbDexie.WEB_LIMIT_LOG.where('id').equalsIgnoreCase(thisItem.id).first()
-        if (resultLimit) {
-          this.tableData.push(
-            {
-              id: thisItem.id,
-              website: thisItem.website,
-              faviconUrl: thisItem.faviconUrl,
-              duration: this.convertTime(thisItem.wasteTime),
-              startLimitTime: resultLimit.startLimitTime,
-              endLimitTime: resultLimit.endLimitTime,
-              limitType: resultLimit.limitType,
-              limitTime: resultLimit.limitTime ? this.convertTime(resultLimit.limitTime * 1000) : ''
-            }
-          )
-        } else {
-          this.tableData.push(
-            {
-              id: thisItem.id,
-              website: thisItem.website,
-              faviconUrl: thisItem.faviconUrl,
-              duration: this.convertTime(thisItem.wasteTime)
-            }
-          )
-        }
+        this.tableData.push(
+          {
+            id: thisItem.id,
+            website: thisItem.website,
+            faviconUrl: thisItem.faviconUrl,
+            duration: this.convertTime(thisItem.wasteTime)
+          }
+        )
       }
     },
     handleCurrentChange (val) {
@@ -351,6 +317,28 @@ export default {
         id: row.id
       }
       dbDexie.WEB_LIMIT_LOG.update(row.id, params)
+    },
+    async changeDate (value) {
+      const tableName = 'WEB_LOGS_' + value.replaceAll('-', '')
+      if (this.indexDB.objectStoreNames.contains(tableName)) {
+        const dbDexieTwo = new Dexie('MyTimeDB-Tracking')
+        dbDexieTwo.version(1).stores({
+          [tableName]: 'id'
+        })
+        const result = await dbDexieTwo[tableName].reverse().sortBy('wasteTime')
+        this.tableData = []
+        for (const thisItem of result) {
+          this.tableData.push(
+            {
+              id: thisItem.id,
+              website: thisItem.website,
+              faviconUrl: thisItem.faviconUrl,
+              duration: this.convertTime(thisItem.wasteTime)
+            }
+          )
+        }
+        dbDexieTwo.close()
+      }
     }
   }
 
